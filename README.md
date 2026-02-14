@@ -1,2 +1,2 @@
 # STE_Studio.github.io
-index.html
+/index.html
