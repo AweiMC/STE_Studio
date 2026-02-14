@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>System Snapshot Analyzer</title>
+    <style>
+        /* 全局样式重置与基础配置 - 提升可读性，添加注释 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, Segoe UI, Arial, sans-serif;
+            background: #0f1115;
+            color: #e6e6e6;
+            line-height: 1.6;
+            /* 优化行高，提升文字可读性 */
+        }
+
+        /* 头部样式 - 优化布局，提升视觉层次感 */
+        header {
+            padding: 12px 16px;
+            background: #1a1d24;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            border-bottom: 1px solid #2a2f40;
+            /* 增加底部边框，区分头部与内容 */
+        }
+
+        input[type="file"] {
+            background: #222633;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 6px;
+            border-radius: 8px;
+            /* 统一圆角风格 */
+            cursor: pointer;
+        }
+
+        #status {
+            color: #7fb3ff;
+            /* 状态文字高亮，更醒目 */
+            font-size: 14px;
+        }
+
+        /* 主容器布局 - 优化高度计算，避免滚动溢出问题 */
+        #container {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            height: calc(100vh - 57px);
+            /* 适配头部边框高度，避免滚动条 */
+        }
+
+        /* 侧边栏 - 优化滚动样式，增加视觉层次 */
+        #sidebar {
+            background: #161922;
+            padding: 12px;
+            overflow: auto;
+            border-right: 1px solid #2a2f40;
+            /* 增加右侧边框，区分侧边栏与内容区 */
+        }
+
+        /* 内容区 - 优化内边距，提升阅读体验 */
+        #content {
+            padding: 20px;
+            overflow: auto;
+        }
+
+        /* 通用模块样式 */
+        .section {
+            margin-bottom: 28px;
+            /* 增加模块间距，提升层次感 */
+        }
+
+        .card {
+            background: #1c202b;
+            border-radius: 12px;
+            padding: 16px;
+            /* 增加内边距，优化内容展示 */
+            margin: 12px 0;
+            /* 优化卡片间距 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
+            /* 增强阴影，提升立体感 */
+            border: 1px solid #2a2f40;
+            /* 增加卡片边框，提升精致度 */
+            overflow: hidden;
+            /* 关键：防止卡片内部内容溢出卡片边界 */
+        }
+
+        /* 网格布局 - 优化间距，提升响应式表现 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            /* 加宽卡片最小宽度，提升可读性 */
+            gap: 16px;
+            /* 增加网格间距 */
+        }
+
+        small {
+            color: #aaa;
+            font-size: 13px;
+        }
+
+        /* 按钮样式 - 优化交互效果，提升视觉反馈 */
+        button {
+            width: 100%;
+            margin: 6px 0;
+            /* 优化按钮间距 */
+            background: #2a2f40;
+            color: #fff;
+            border: none;
+            padding: 10px 8px;
+            /* 优化按钮内边距 */
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+            /* 增加过渡动画，提升交互感 */
+        }
+
+        button:hover {
+            background: #3a4060;
+            transform: translateY(-1px);
+            /* 轻微上浮，增强悬浮反馈 */
+        }
+
+        /* 计数信息 - 高亮展示，提升醒目度 */
+        .count {
+            font-size: 14px;
+            color: #7fb3ff;
+            background: rgba(127, 179, 255, 0.1);
+            /* 增加背景色，突出计数 */
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 8px 0 16px 0;
+            /* 优化间距 */
+        }
+
+        /* 核心统计汇总 - 特殊样式，突出关键数据 */
+        .summary-count {
+            font-size: 15px;
+            color: #a8d8ff;
+            background: rgba(168, 216, 255, 0.08);
+            padding: 12px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 3px solid #7fb3ff;
+            /* 左侧高亮边框，突出汇总 */
+        }
+
+        /* 堆栈信息 - 优化样式，提升可读性 */
+        .stack {
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            /* 适当加高，展示更多堆栈信息 */
+            overflow: auto;
+            background: #12141a;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            /* 自动换行，避免横向溢出 */
+            word-break: break-all;
+            /* 超长内容换行 */
+        }
+
+        /* 线程状态 - 不同状态不同颜色，提升辨识度 */
+        .thread-state {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .state-runnable {
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+        }
+
+        .state-waiting {
+            background: rgba(192, 132, 252, 0.2);
+            color: #c084fc;
+        }
+
+        .state-blocked {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .state-terminated {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .mixin-target-list {
+            margin-top: 10px;
+            padding: 8px;
+            background: #12141a;
+            border-radius: 8px;
+            font-size: 13px;
+            max-height: 160px;
+            overflow-y: auto;
+
+            /* 关键：正常流布局 */
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .mixin-item {
+            padding: 3px 0;
+            border-bottom: 1px solid #222633;
+            line-height: 1.4;
+        }
+
+        .mixin-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Meta 信息内部项样式 - 规整排版 */
+        .meta-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #222633;
+            margin-bottom: 8px;
+        }
+
+        .meta-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        /* 自定义滚动条 - 提升深色主题视觉体验 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #161922;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2a2f40;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a4060;
+        }
+
+        /* 响应式适配 - 手机端优化布局 */
+        @media (max-width: 768px) {
+            #container {
+                grid-template-columns: 1fr;
+                /* 移动端单列布局 */
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+                /* 移动端卡片单列展示 */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 头部：文件上传 + 状态提示 -->
+    <header>
+        <input type="file" id="fileInput" accept=".json"> <!-- 增加JSON文件筛选 -->
+        <span id="status">No file loaded</span>
+    </header>
+
+    <!-- 主容器：侧边栏导航 + 内容展示区 -->
+    <div id="container">
+        <div id="sidebar"></div>
+        <div id="content"></div>
+    </div>
+
+    <script>
+        // 全局变量：存储快照数据
+        let snapshot = null;
+        const sidebar = document.getElementById('sidebar');
+        const content = document.getElementById('content');
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+
+        /**
+         * 文件上传变更事件：读取JSON文件并解析快照数据
+         */
+        fileInput.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 验证文件格式为JSON
+            if (!file.name.endsWith('.json')) {
+                status.textContent = 'Error: Please upload a JSON file';
+                status.style.color = '#ef4444';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    snapshot = JSON.parse(reader.result);
+                    buildSidebarMenu(); // 构建侧边栏菜单
+                    showMetaInfo(); // 默认展示元信息
+                    status.textContent = `Loaded: ${file.name}`;
+                    status.style.color = '#7fb3ff';
+                } catch (error) {
+                    status.textContent = 'Error: Invalid JSON file';
+                    status.style.color = '#ef4444';
+                    console.error('JSON解析失败：', error);
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        /**
+         * 构建侧边栏导航菜单
+         */
+        function buildSidebarMenu() {
+            sidebar.innerHTML = '';
+            addSidebarButton('Meta Info', showMetaInfo); // 元信息
+
+            const groups = snapshot.groups || {};
+            for (const key in groups) {
+                if (key === 'mixins') {
+                    addSidebarButton('Mixins (详细统计)', () => showMixinsDetail(groups.mixins));
+                } else if (key === 'threads') {
+                    addSidebarButton('Threads (带状态)', () => showThreadsDetail(groups.threads));
+                } else if (key === 'hardware') { // 识别 hardware 分组
+                    addSidebarButton('Hardware (硬件信息)', () => showHardwareDetail(groups.hardware));
+                } else {
+                    addSidebarButton(key, () => showGenericInfo(key, groups[key]));
+                }
+            }
+        }
+
+        /**
+         * 添加侧边栏按钮
+         * @param {string} btnName 按钮名称
+         * @param {Function} clickFn 点击事件回调
+         */
+        function addSidebarButton(btnName, clickFn) {
+            const button = document.createElement('button');
+            button.textContent = btnName;
+            button.onclick = clickFn;
+            sidebar.appendChild(button);
+        }
+
+        /**
+         * 优化 Meta 信息展示（告别零散，整合为精美卡片）- 关键修改
+         */
+        function showMetaInfo() {
+            const meta = snapshot.meta || {};
+            // 格式化时间戳
+            const snapshotTime = meta.timestamp
+                ? new Date(meta.timestamp).toLocaleString()
+                : 'Unknown';
+
+            // 整合为单个卡片，内部规整排版
+            content.innerHTML = `
+                <div class='section'>
+                    <h2>Meta Information <small>（快照元数据）</small></h2>
+                    <div class='card'>
+                        <h3 style="color: #7fb3ff; margin-bottom: 16px; font-size: 18px;">📋 快照核心信息</h3>
+                        <div class='meta-item'>
+                            <b>Minecraft 版本</b>: ${meta.minecraftVersion || 'Unknown'}
+                        </div>
+                        <div class='meta-item'>
+                            <b>Mod 版本</b>: ${meta.modVersion || 'Unknown'}
+                        </div>
+                        <div class='meta-item'>
+                            <b>Java 版本</b>: ${meta.javaVersion || 'Unknown'}
+                        </div>
+                        <div class='meta-item'>
+                            <b>快照生成时间</b>: ${snapshotTime}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * 展示Mixins详细信息（补充完整计数，解决长名称溢出）
+         * @param {object} mixinsData Mixins快照数据
+         */
+        function showMixinsDetail(mixinsData) {
+
+            const configs = mixinsData.configs ?? [];
+            const targetSummary = mixinsData.targetSummary ?? {};
+
+            const targetEntries = Object.entries(targetSummary);
+
+            let totalRelations = 0;
+            for (const [, list] of targetEntries) {
+                totalRelations += list.length;
+            }
+
+            targetEntries.sort((a, b) => b[1].length - a[1].length);
+
+            content.innerHTML = `
+    <h2>Mixins Overview</h2>
+
+    <div style="margin:12px 0;">
+        <input 
+            id="mixinSearch"
+            placeholder="🔍 搜索 Mixin 名 / 包路径 / 目标类..."
+            style="
+                width:100%;
+                padding:10px;
+                border-radius:8px;
+                border:1px solid #2a2f40;
+                background:#12141a;
+                color:#fff;
+                outline:none;
+                font-size:14px;
+            "
+        >
+    </div>
+
+    <div class="summary-count">
+        📊 配置数: ${configs.length}
+        ｜目标类: ${targetEntries.length}
+        ｜注入关系: ${totalRelations}
+    </div>
+
+    <h3>🔥 注入热点类</h3>
+
+    <div id="hotTargetList" class="card mixin-target-list"></div>
+
+    <h3 style="margin-top:22px;">📦 Mixin 配置</h3>
+
+    <div id="mixinConfigGrid" class="grid"></div>
+`;
+
+            const hotTargetList = document.getElementById("hotTargetList");
+            const mixinConfigGrid = document.getElementById("mixinConfigGrid");
+            const searchInput = document.getElementById("mixinSearch");
+
+            // ===== 渲染函数 =====
+
+            function renderHotTargets(filter = "") {
+                const f = filter.toLowerCase();
+
+                hotTargetList.innerHTML = targetEntries
+                    .filter(([target]) => target.toLowerCase().includes(f))
+                    .map(([target, list]) => `
+            <div class="mixin-item">
+                ${highlight(target, f)}
+                <small>（${list.length} 次注入）</small>
+            </div>
+        `).join('');
+            }
+
+            function renderConfigs(filter = "") {
+                const f = filter.toLowerCase();
+
+                mixinConfigGrid.innerHTML = configs
+                    .filter(cfg => {
+                        if (cfg.name?.toLowerCase().includes(f)) return true;
+                        if (cfg.mixinPackage?.toLowerCase().includes(f)) return true;
+
+                        return cfg.targets.some(t => t.toLowerCase().includes(f));
+                    })
+                    .map(cfg => `
+            <div class="card">
+                <b>名称</b>: ${highlight(cfg.name, f)}<br>
+                <b>优先级</b>: ${cfg.priority}<br>
+                <b>包路径</b>: ${highlight(cfg.mixinPackage, f)}<br>
+                <b>环境</b>: ${cfg.environmentVersion}<br>
+                <b>目标数量</b>: ${cfg.targets.length}
+
+                <div style="margin-top:8px;">
+                    <small>目标类：</small>
+                    <div class="mixin-target-list">
+                        ${cfg.targets
+                            .filter(t => !f || t.toLowerCase().includes(f))
+                            .map(t => `
+                                <div class="mixin-item">
+                                    ${highlight(t, f)}
+                                </div>
+                            `).join('')}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+            }
+
+            // ===== 高亮匹配 =====
+
+            function highlight(text, keyword) {
+                if (!keyword || !text) return text;
+
+                const reg = new RegExp(`(${keyword})`, 'ig');
+                return text.replace(reg, `<span style="color:#7fb3ff;font-weight:600;">$1</span>`);
+            }
+
+            // ===== 初始化渲染 =====
+
+            renderHotTargets();
+            renderConfigs();
+
+            // ===== 实时搜索 =====
+
+            searchInput.addEventListener("input", () => {
+                const value = searchInput.value.trim();
+                renderHotTargets(value);
+                renderConfigs(value);
+            });
+        }
+
+
+        /**
+         * 展示线程详细信息（带状态高亮、完整堆栈）
+         * @param {object} threadsData 线程快照数据
+         */
+        function showThreadsDetail(threadsData) {
+            const threadList = threadsData.threads || [];
+            const totalThreads = threadList.length;
+            const runnableThreads = threadList.filter(t => t.state === 'RUNNABLE').length;
+            const waitingThreads = threadList.filter(t => t.state === 'WAITING').length;
+
+            // 构建内容HTML
+            content.innerHTML = `
+                <h2>Threads <small>(${totalThreads} 个线程)</small></h2>
+                
+                <!-- 线程核心统计 -->
+                <div class='summary-count'>
+                    📊 线程统计：可运行 = ${runnableThreads} | 等待中 = ${waitingThreads} | 总数 = ${totalThreads}
+                </div>
+
+                <!-- 线程卡片网格 -->
+                <div class='grid'>
+                    ${threadList.map(thread => {
+                // 线程状态样式类
+                let stateClass = '';
+                switch (thread.state) {
+                    case 'RUNNABLE':
+                        stateClass = 'state-runnable';
+                        break;
+                    case 'WAITING':
+                        stateClass = 'state-waiting';
+                        break;
+                    case 'BLOCKED':
+                        stateClass = 'state-blocked';
+                        break;
+                    case 'TERMINATED':
+                        stateClass = 'state-terminated';
+                        break;
+                    default:
+                        stateClass = '';
+                }
+
+                // 构建堆栈信息
+                const stackHtml = thread.stack?.map(stack =>
+                    `${stack.clazz}.${stack.method}(${stack.file}:${stack.line}) ${stack.module || ''}`
+                ).join('\n') || '暂无堆栈信息';
+
+                return `
+                            <div class='card'>
+                                <b>线程名称</b>: ${thread.name || 'Unknown'}<br>
+                                <b>线程ID</b>: ${thread.id || 'Unknown'}<br>
+                                <b>线程状态</b>: <span class='thread-state ${stateClass}'>${thread.state || 'Unknown'}</span><br>
+                                <b>线程组</b>: ${thread.group || 'Unknown'}<br>
+                                <div class='stack'>${stackHtml}</div>
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `;
+        }
+
+        /**
+         * 展示硬件信息卡片（CPU/内存/磁盘/操作系统）
+         * @param {object} hardwareData 硬件快照数据
+         */
+        function showHardwareDetail(hardwareData) {
+            // 解构硬件数据，提供默认值避免报错
+            const cpu = hardwareData.cpu || {};
+            const memory = hardwareData.memory || {};
+            const disks = hardwareData.disks || [];
+            const os = hardwareData.os || {};
+
+            // 数据格式化：字节转GB（保留2位小数，更易读）
+            const formatBytesToGB = (bytes) => {
+                if (!bytes) return '0.00 GB';
+                return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+            };
+
+            // 计算内存使用率
+            const memoryUsedPercent = memory.totalBytes && memory.availableBytes
+                ? (((memory.totalBytes - memory.availableBytes) / memory.totalBytes) * 100).toFixed(2)
+                : '0.00';
+
+            // 构建硬件卡片HTML
+            content.innerHTML = `
+                <h2>Hardware Information <small>（系统硬件快照）</small></h2>
+                
+                <!-- 硬件信息网格卡片 -->
+                <div class='grid'>
+                    <!-- CPU 卡片 -->
+                    <div class='card'>
+                        <h3 style="color: #7fb3ff; margin-bottom: 12px;">🖥️ 处理器信息</h3>
+                        <div><b>处理器名称</b>: ${cpu.name || 'Unknown'}</div>
+                        <div><b>核心数</b>: ${cpu.cores || 'Unknown'}</div>
+                        <div><b>CPU 使用率</b>: <span style="color: #48bb78;">${cpu.loadPercent ? cpu.loadPercent.toFixed(2) + '%' : '0.00%'}</span></div>
+                    </div>
+
+                    <!-- 内存 卡片 -->
+                    <div class='card'>
+                        <h3 style="color: #7fb3ff; margin-bottom: 12px;">🧠 内存信息</h3>
+                        <div><b>总内存</b>: ${formatBytesToGB(memory.totalBytes)}</div>
+                        <div><b>可用内存</b>: ${formatBytesToGB(memory.availableBytes)}</div>
+                        <div><b>内存使用率</b>: <span style="color: #48bb78;">${memoryUsedPercent}%</span></div>
+                    </div>
+
+                    <!-- 操作系统 卡片 -->
+                    <div class='card'>
+                        <h3 style="color: #7fb3ff; margin-bottom: 12px;">💻 操作系统</h3>
+                        <div><b>系统名称</b>: ${os.name || 'Unknown'}</div>
+                        <div><b>系统版本</b>: ${os.version || 'Unknown'}</div>
+                        <div><b>系统架构</b>: ${os.arch || 'Unknown'}</div>
+                    </div>
+
+                    <!-- 磁盘 卡片（支持多个磁盘，循环渲染） -->
+                    ${disks.map((disk, index) => `
+                        <div class='card'>
+                            <h3 style="color: #7fb3ff; margin-bottom: 12px;">💾 磁盘 ${index + 1}</h3>
+                            <div><b>磁盘型号</b>: ${disk.model || 'Unknown'}</div>
+                            <div><b>磁盘大小</b>: ${formatBytesToGB(disk.sizeBytes)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        /**
+         * 展示通用分组信息（JSON格式化展示）
+         * @param {string} groupName 分组名称
+         * @param {object} groupData 分组数据
+         */
+        function showGenericInfo(groupName, groupData) {
+            content.innerHTML = `
+                <h2>${groupName}</h2>
+                <pre class='card'>${JSON.stringify(groupData, null, 2)}</pre>
+            `;
+        }
+
+        // 拖拽上传功能优化
+        document.body.ondragover = e => { e.preventDefault(); };
+        document.body.ondrop = e => {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            if (!file) return;
+
+            // 验证JSON格式
+            if (!file.name.endsWith('.json')) {
+                status.textContent = 'Error: Please upload a JSON file';
+                status.style.color = '#ef4444';
+                return;
+            }
+
+            fileInput.files = e.dataTransfer.files;
+            // 触发文件变更事件
+            fileInput.onchange({ target: { files: [file] } });
+        };
+    </script>
+</body>
+
+</html>
